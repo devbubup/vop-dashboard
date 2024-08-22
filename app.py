@@ -442,6 +442,9 @@ def get_fig_receitas():
 
 if not flag_data_final_maior_que_inicial:
     ############# Gráficos ##############
+    ########### BOTÃO PARA RECARREGAR OS DADOS ########
+    if st.button('Recarregar Planilha'):
+        st.cache_data.clear()  # Reseta o cache
     col11, col22 = st.columns([2, 1])
 
     with col11:
