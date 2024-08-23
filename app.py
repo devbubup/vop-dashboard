@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
+import plotly.express as px
 from datetime import date
 from PIL import Image
 import hmac
@@ -177,6 +178,22 @@ def get_vendas_realizadas(df):
         df_vendidas = pd.DataFrame(columns=['Produto', 'Quantidade'])
     return df_vendidas
 
+def get_ticket_medio_por_vendedor(df):
+    df_vendidas = df[df['Estado'] == 'Vendida']
+    if 'Responsável' in df_vendidas.columns:
+        df_vendidas = df_vendidas.groupby('Responsável')['Valor Único'].mean().reset_index(name='Ticket Médio')
+        df_vendidas.rename(columns={'Responsável': 'Responsável'}, inplace=True)
+    else:
+        df_vendidas = pd.DataFrame(columns=['Responsável', 'Ticket Médio'])
+    return df_vendidas
+
+def get_conversao_por_vendedor(df):
+    total_por_responsavel = df.groupby('Responsável').size()
+    vendidas_por_responsavel = df[df['Estado'] == 'Vendida'].groupby('Responsável').size()
+    taxa_conversao_responsavel_e_venda = (vendidas_por_responsavel / total_por_responsavel).fillna(0) * 100
+    taxa_conversao_responsavel_e_venda = taxa_conversao_responsavel_e_venda.rename('Taxa de Conversão (%)')
+    taxa_conversao_responsavel_e_venda = (taxa_conversao_responsavel_e_venda / 100).round(4)
+    return taxa_conversao_responsavel_e_venda, vendidas_por_responsavel
 ################################################
 
 df = load_data()
@@ -438,6 +455,80 @@ def get_fig_receitas():
                 marker_line_width=1,
             )
     return fig
+
+def plot_vendedores_scatter_heatmap(df):
+    # Calcula a taxa de conversão por vendedor
+    taxa_conversao_responsavel = get_conversao_por_vendedor(df)[0]
+    qtde_vendida = get_conversao_por_vendedor(df)[1]
+    
+    # Calcula o ticket médio por vendedor
+    df_ticket_medio_por_vendedor = get_ticket_medio_por_vendedor(df)
+    
+    
+    if taxa_conversao_responsavel.empty or df_ticket_medio_por_vendedor.empty:
+        st.warning('Não há dados para exibir.')
+        fig = go.Figure()
+        return fig
+    
+    # Junta os dois DataFrames pelo nome do vendedor
+    df_combined = pd.merge(
+        taxa_conversao_responsavel.reset_index(), 
+        df_ticket_medio_por_vendedor, 
+        on='Responsável'
+    )
+    
+        
+    # Renomeia as colunas para facilitar o entendimento
+    df_combined.columns = ['Responsável', 'Taxa de Conversão', 'Ticket Médio']
+    df_combined['QTDE'] = qtde_vendida.values
+    
+    # Calcula o Indicador
+    df_combined['Indicador'] = df_combined['Taxa de Conversão'] * df_combined['Ticket Médio'] * df_combined['QTDE']
+    
+    # Gera o scatter plot com marcadores quadrados grandes
+    scatter_fig = px.scatter(
+        df_combined,
+        x='Taxa de Conversão',
+        y='Ticket Médio',
+        text='Responsável',
+        size='Indicador',  # Tamanho do quadrado baseado no Indicador
+        color='Indicador',  # Cor baseada no Indicador
+        color_continuous_scale='Viridis',  # Esquema de cores
+        labels={
+            'Taxa de Conversão': 'Taxa de Conversão (%)',
+            'Ticket Médio': 'Ticket Médio (R$)',
+            'Indicador': 'Indicador (Taxa de Conversão * Ticket Médio * QTDE Vendas)',
+        },
+        title='Mapa dos Vendedores - Taxa de Conversão x Ticket Médio',
+    ).update_traces(
+        marker=dict(sizemode='area'),
+        textposition='top center',
+        textfont=dict(
+            size=14,
+            color="black"
+        ),
+        
+        
+    ).update_layout(
+        xaxis_nticks=10,
+        yaxis_nticks=10,
+        # height=600,
+        # width=800,
+        coloraxis_showscale=False,
+        xaxis=dict(
+            range=[-0.001, max(df_combined['Taxa de Conversão']) * 1.2],
+            tickformat=".0%"
+        ),
+        yaxis=dict(
+            range=[-0.001, max(df_combined['Ticket Médio']) * 1.2],
+        ),
+        title={
+            'font': {
+                'size': 20  # Altere o valor para o tamanho desejado
+            }
+        }
+    )    
+    return scatter_fig
 ################################################
 
 if not flag_data_final_maior_que_inicial:
@@ -489,7 +580,9 @@ if not flag_data_final_maior_que_inicial:
                 else:
                     df_etapas = performance_etapa.loc[responsavel_conversao]
                     st.dataframe(df_etapas, use_container_width=True)
-            
+        
+        st.divider()
+        st.plotly_chart(plot_vendedores_scatter_heatmap(df), use_container_width=True)
 
     with col2:
         st.subheader('VENDAS POR VENDEDORES')
@@ -530,7 +623,7 @@ if not flag_data_final_maior_que_inicial:
         col1aa, col1ab = st.columns(2)
         with col1aa:
             # Criar um dropdown para selecionar o número de produtos a exibir
-            tops = st.selectbox('Top Produtos', [5, 10, 15, 20, 50], index=1)
+            tops = st.selectbox('Top Produtos', [5, 10, 15, 20, 50], index=0)
     with colb:
         st.subheader('PERFORMANCE DE PRODUTOS')
     st.plotly_chart(get_fig_metas1(df_realizado_total.sort_values('Valor Total', ascending=False).head(tops)), use_container_width=True)
