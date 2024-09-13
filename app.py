@@ -204,7 +204,7 @@ st.sidebar.image("logo.png", width=100)
 
 ################ FILTROS ####################
 # DATA
-data_inicial = st.sidebar.date_input('Data Inicial', date.today())
+data_inicial = st.sidebar.date_input('Data Inicial', date.today().replace(day=1))
 data_final = st.sidebar.date_input('Data Final', date.today())
 data_inicial = pd.to_datetime(data_inicial)
 data_final = pd.to_datetime(data_final)
