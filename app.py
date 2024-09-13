@@ -308,14 +308,13 @@ def get_fig_metas1(df_realizado=df_receita):
     return fig
 
 def get_fig_metas2():
-    if data_inicial.month != data_final.month or data_inicial.month != 8:
+    if data_inicial.month != data_final.month:
         fig = go.Figure()
-        st.warning('Por favor, selecione o mês de Agosto para exibir as metas.')
+        st.warning('Por favor, selecione o mesmo mês para comparação.')
         return fig
 
     df_realizado = get_vendas_realizadas(df_mes_atual)
     meta_empresa = df_metas.loc[(df_metas['Mes'] == months[str(data_inicial.month).zfill(2)]) & (df_metas['Responsável'] == 'Empresa')]['Meta'].values[0]
-    print(meta_empresa)
     realizado_percentual = round(float((df_realizado["Quantidade"].sum() / meta_empresa) * 100), 2)
     restante_percentual = 100 - realizado_percentual
 
