@@ -11,6 +11,7 @@ st.set_page_config(
     layout="wide",
     page_title="Dash VOP",
 )
+db_name = 'vop'
 
 months = {
     '01': 'Janeiro',
@@ -27,33 +28,27 @@ months = {
     '12': 'Dezembro',
 }
 
-funis = {
-    'Funil Clientes VOP': [
-        'Em contato',
-        'Sessão Agendada',
-        'Sessão confirmada',
-        'Sessão Realizada',
-        'Pagamento',
-        'Acompanhamento',
-        'Pós-vendas',
-    ],
-    'Funil Novos Clientes': [
-        'Novo Lead',
-        'Agendamento',
-        'Sessão Agendada',
-        'Sessão Realizada',
-        'Pagamento',
-        'Agendar Próxima Sessão',
-    ],
-    'Funil Oficina Divertidamente': [
-        'Novo Lead',
-        'Identificação',
-        'Primeiro Contato',
-        'Apresentação',
-        'Proposta Realizada',
-        'Pagamento'
-    ]
-}
+def get_funis(db_name):
+    db_host = 'bubup.cngui0qechn6.sa-east-1.rds.amazonaws.com'
+    db_port = 3306
+    db_user = 'admin'
+    db_password = 'Bubup.db'
+    
+    conn = pymysql.connect(
+        host=db_host,
+        port=db_port,
+        user=db_user,
+        password=db_password,
+        database=db_name
+    )
+    cur1 = conn.cursor()
+    query1 = f"SELECT * FROM RD_funil_etapas;"
+    cur1.execute(query1)
+    colunas1 = [i[0] for i in cur1.description]
+    df = pd.DataFrame(cur1.fetchall(), columns=colunas1)
+    cur1.close()
+    return df
+    
 
 
 ############# CSS #############
@@ -72,12 +67,11 @@ st.markdown(
     unsafe_allow_html=True
 )
 ###############################
-def get_fullDeals():
+def get_fullDeals(db_name):
     db_host = 'bubup.cngui0qechn6.sa-east-1.rds.amazonaws.com'
     db_port = 3306
     db_user = 'admin'
     db_password = 'Bubup.db'
-    db_name = 'vop'
     
     conn = pymysql.connect(
         host=db_host,
@@ -115,13 +109,20 @@ def get_fullDeals():
 #################### FUNÇÕES ####################
 @st.cache_data
 def load_data():
-    df = get_fullDeals()
+    df = get_fullDeals(db_name)
     return df
 
 @st.cache_data
 def load_metas():
     df_metas = pd.read_csv("metas.csv")
     return df_metas
+
+@st.cache_data
+def load_funis():
+    df_funis = get_funis(db_name)
+    return df_funis
+
+funis = load_funis().groupby('Funil')['Etapa'].apply(list).to_dict()
 
 def check_password():
     """Returns `True` if the user had the correct password."""
@@ -200,7 +201,10 @@ df = load_data()
 df_metas = load_metas()
 df_total = load_data()
 st.session_state["negocios"] = df
-st.sidebar.image("logo.png", width=100)
+# st.sidebar.image("logo.png", width=100)
+st.header("Dashboard - VOP")
+st.divider()
+st.sidebar.image("logo2.png", width=250)
 
 ################ FILTROS ####################
 # DATA
@@ -533,7 +537,8 @@ def plot_vendedores_scatter_heatmap(df):
 if not flag_data_final_maior_que_inicial:
     ############# Gráficos ##############
     ########### BOTÃO PARA RECARREGAR OS DADOS ########
-    if st.button('Recarregar Planilha'):
+    st.sidebar.markdown("")
+    if st.sidebar.button('Recarregar Planilha'):
         st.cache_data.clear()  # Reseta o cache
     col11, col22 = st.columns([2, 1])
 
