@@ -321,6 +321,10 @@ def get_fig_metas2():
     meta_empresa = df_metas.loc[(df_metas['Mes'] == months[str(data_inicial.month).zfill(2)]) & (df_metas['Responsável'] == 'Empresa')]['Meta'].values[0]
     realizado_percentual = round(float((df_realizado["Quantidade"].sum() / meta_empresa) * 100), 2)
     restante_percentual = 100 - realizado_percentual
+    
+    if realizado_percentual > 100:
+        realizado_percentual = 100
+        restante_percentual = 0
 
     fig = go.Figure()
 
