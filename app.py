@@ -57,7 +57,7 @@ st.markdown(
     <style>
     /* Cor de fundo da sidebar */
     [data-testid="stSidebar"] {
-        background-color: #4A0A86;  /* Cor de fundo da sidebar */
+        background-color: grey;  /* Cor de fundo da sidebar */
     }
     [data-testid="stSidebar"] label {
     color: white !important;  /* Cor do texto como branco */
